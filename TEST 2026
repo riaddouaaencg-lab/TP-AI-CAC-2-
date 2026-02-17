@@ -75,3 +75,198 @@ print(f&quot; • Écart-type mensuel : {stats[&#39;ecart_type_mensuel&#39;]:.2f
 print(f&quot; • Médiane : {stats[&#39;mediane&#39;]:.2f}%&quot;)
 print(f&quot; • Rendement annualisé : {stats[&#39;rendement_annuel&#39;]:.2f}%&quot;)
 print(f&quot; • Volatilité annualisée : {stats[&#39;volatilite_annuelle&#39;]:.2f}%&quot;)
+# ============================================================================
+# QUESTION 1.2 — VISUALISATION DISTRIBUTIONS
+# ============================================================================
+
+print(&quot;\n&quot; + &quot;=&quot;*80)
+print(&quot;QUESTION 1.2 — VISUALISATION DISTRIBUTIONS&quot;)
+print(&quot;=&quot;*80)
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+# Subplot 1 : Histogrammes superposés
+ax1 = axes[0]
+ax1.hist(rendements_A, bins=10, alpha=0.6, color=&#39;green&#39;, edgecolor=&#39;black&#39;,
+label=&#39;Portefeuille A (Conservative)&#39;, density=True)
+ax1.hist(rendements_B, bins=10, alpha=0.6, color=&#39;red&#39;, edgecolor=&#39;black&#39;,
+label=&#39;Portefeuille B (Agressif)&#39;, density=True)
+# Lignes moyennes
+ax1.axvline(stats_A[&#39;moyenne_mensuelle&#39;], color=&#39;darkgreen&#39;, linestyle=&#39;--&#39;,
+linewidth=2, label=f&#39;Moyenne A = {stats_A[&quot;moyenne_mensuelle&quot;]:.2f}%&#39;)
+ax1.axvline(stats_B[&#39;moyenne_mensuelle&#39;], color=&#39;darkred&#39;, linestyle=&#39;--&#39;,
+linewidth=2, label=f&#39;Moyenne B = {stats_B[&quot;moyenne_mensuelle&quot;]:.2f}%&#39;)
+ax1.set_title(&#39;Distributions rendements mensuels&#39;, fontsize=12, fontweight=&#39;bold&#39;)
+ax1.set_xlabel(&#39;Rendement mensuel (%)&#39;)
+ax1.set_ylabel(&#39;Densité&#39;)
+ax1.legend(fontsize=9)
+ax1.grid(True, alpha=0.3)
+# Subplot 2 : Boxplots comparatifs
+ax2 = axes[1]
+data_boxplot = [rendements_A, rendements_B]
+bp = ax2.boxplot(data_boxplot, labels=[&#39;Portefeuille A&#39;, &#39;Portefeuille B&#39;],
+
+patch_artist=True, widths=0.6)
+
+# Couleurs boxplots
+colors = [&#39;lightgreen&#39;, &#39;lightcoral&#39;]
+for patch, color in zip(bp[&#39;boxes&#39;], colors):
+patch.set_facecolor(color)
+ax2.set_title(&#39;Boxplots comparatifs (outliers visibles)&#39;, fontsize=12, fontweight=&#39;bold&#39;)
+ax2.set_ylabel(&#39;Rendement mensuel (%)&#39;)
+ax2.grid(True, alpha=0.3, axis=&#39;y&#39;)
+ax2.axhline(0, color=&#39;black&#39;, linestyle=&#39;:&#39;, linewidth=1)
+plt.tight_layout()
+plt.show()
+print(&quot;✓ Graphiques générés (histogrammes + boxplots)&quot;)
+# ============================================================================
+# QUESTION 1.3 — VALUE AT RISK (VaR 95%)
+# ============================================================================
+print(&quot;\n&quot; + &quot;=&quot;*80)
+print(&quot;QUESTION 1.3 — VALUE AT RISK (VaR 95%)&quot;)
+print(&quot;=&quot;*80)
+def calculer_var_portefeuille(stats_dict, capital, alpha=0.05):
+&quot;&quot;&quot;
+Calcule VaR paramétrique mensuelle et annuelle
+Parameters:
+stats_dict : dict
+Statistiques portefeuille (from calculer_stats_portefeuille)
+capital : float
+Capital investi (€)
+alpha : float
+Niveau risque (0.05 pour VaR 95%)
+Returns:
+dict : VaR calculées
+&quot;&quot;&quot;
+# Quantile normal standard pour alpha=5% (queue gauche)
+z_alpha = stats.norm.ppf(alpha) # ≈ -1.645
+# a) VaR mensuelle (%)
+var_mensuelle_pct = stats_dict[&#39;moyenne_mensuelle&#39;] + z_alpha * stats_dict[&#39;ecart_type_mensuel&#39;]
+# b) VaR annuelle (%)
+# Méthode : Utiliser rendement et volatilité annualisés
+var_annuelle_pct = stats_dict[&#39;rendement_annuel&#39;] + z_alpha * stats_dict[&#39;volatilite_annuelle&#39;]
+# c) VaR en perte monétaire (€)
+var_mensuelle_euros = capital * (var_mensuelle_pct / 100)
+var_annuelle_euros = capital * (var_annuelle_pct / 100)
+var_results = {
+&#39;var_mensuelle_pct&#39;: var_mensuelle_pct,
+&#39;var_annuelle_pct&#39;: var_annuelle_pct,
+&#39;var_mensuelle_euros&#39;: var_mensuelle_euros,
+&#39;var_annuelle_euros&#39;: var_annuelle_euros
+}
+return var_results
+# Calcul VaR pour les deux portefeuilles
+var_A = calculer_var_portefeuille(stats_A, capital)
+var_B = calculer_var_portefeuille(stats_B, capital)
+# Affichage résultats
+print(f&quot;\n�� CAPITAL INVESTI : €{capital:,.0f}&quot;)
+print(f&quot;�� PERTE MAX TOLÉRÉE CLIENT : €{perte_max_toleree:,.0f} (-{perte_max_toleree/capital*100:.0f}%)&quot;)
+print(f&quot;\n�� PORTEFEUILLE A (Conservative)&quot;)
+print(f&quot; • VaR 95% mensuelle : {var_A[&#39;var_mensuelle_pct&#39;]:.2f}% → €{var_A[&#39;var_mensuelle_euros&#39;]:,.0f}&quot;)
+print(f&quot; • VaR 95% annuelle : {var_A[&#39;var_annuelle_pct&#39;]:.2f}% → €{var_A[&#39;var_annuelle_euros&#39;]:,.0f}&quot;)
+
+print(f&quot;\n�� PORTEFEUILLE B (Agressif)&quot;)
+print(f&quot; • VaR 95% mensuelle : {var_B[&#39;var_mensuelle_pct&#39;]:.2f}% → €{var_B[&#39;var_mensuelle_euros&#39;]:,.0f}&quot;)
+print(f&quot; • VaR 95% annuelle : {var_B[&#39;var_annuelle_pct&#39;]:.2f}% → €{var_B[&#39;var_annuelle_euros&#39;]:,.0f}&quot;)
+# Vérification contrainte client
+print(f&quot;\n✅ VALIDATION CONTRAINTE CLIENT (VaR annuelle ≤ -€50,000) :&quot;)
+contrainte_A = abs(var_A[&#39;var_annuelle_euros&#39;]) &lt;= perte_max_toleree
+contrainte_B = abs(var_B[&#39;var_annuelle_euros&#39;]) &lt;= perte_max_toleree
+print(f&quot; • Portefeuille A : {&#39;✓ RESPECTÉE&#39; if contrainte_A else &#39;✗ NON RESPECTÉE&#39;} &quot;
+f&quot;({var_A[&#39;var_annuelle_euros&#39;]:,.0f} € vs -{perte_max_toleree:,.0f} €)&quot;)
+print(f&quot; • Portefeuille B : {&#39;✓ RESPECTÉE&#39; if contrainte_B else &#39;✗ NON RESPECTÉE&#39;} &quot;
+f&quot;({var_B[&#39;var_annuelle_euros&#39;]:,.0f} € vs -{perte_max_toleree:,.0f} €)&quot;)
+# d) Test normalité (Shapiro-Wilk)
+print(f&quot;\n�� TEST NORMALITÉ (Shapiro-Wilk, H0: données normales)&quot;)
+stat_A, p_value_A = stats.shapiro(rendements_A)
+stat_B, p_value_B = stats.shapiro(rendements_B)
+print(f&quot;\n PORTEFEUILLE A :&quot;)
+print(f&quot; • Statistique Shapiro : {stat_A:.4f}&quot;)
+print(f&quot; • P-value : {p_value_A:.4f}&quot;)
+if p_value_A &gt; 0.05:
+print(f&quot; ✓ Données compatibles loi normale (p &gt; 0.05)&quot;)
+else:
+print(f&quot; ✗ Données s&#39;écartent loi normale (p &lt; 0.05) → VaR paramétrique moins fiable&quot;)
+print(f&quot;\n PORTEFEUILLE B :&quot;)
+print(f&quot; • Statistique Shapiro : {stat_B:.4f}&quot;)
+print(f&quot; • P-value : {p_value_B:.4f}&quot;)
+if p_value_B &gt; 0.05:
+print(f&quot; ✓ Données compatibles loi normale (p &gt; 0.05)&quot;)
+else:
+print(f&quot; ✗ Données s&#39;écartent loi normale (p &lt; 0.05) → VaR paramétrique moins fiable&quot;)
+# ============================================================================
+# QUESTION 1.4 — RATIO SHARPE ET RECOMMANDATION
+# ============================================================================
+print(&quot;\n&quot; + &quot;=&quot;*80)
+print(&quot;QUESTION 1.4 — RATIO SHARPE ET RECOMMANDATION CLIENT&quot;)
+print(&quot;=&quot;*80)
+# a) Calcul Ratio Sharpe
+sharpe_A = (stats_A[&#39;rendement_annuel&#39;] - taux_sans_risque) / stats_A[&#39;volatilite_annuelle&#39;]
+sharpe_B = (stats_B[&#39;rendement_annuel&#39;] - taux_sans_risque) / stats_B[&#39;volatilite_annuelle&#39;]
+print(f&quot;\n�� RATIO SHARPE (Rendement ajusté risque)&quot;)
+print(f&quot; Formule : (Rendement annuel - Taux sans risque) / Volatilité annuelle&quot;)
+print(f&quot; Taux sans risque (rf) : {taux_sans_risque}%&quot;)
+print(f&quot;\n PORTEFEUILLE A :&quot;)
+print(f&quot; • Sharpe = ({stats_A[&#39;rendement_annuel&#39;]:.2f} - {taux_sans_risque}) / {stats_A[&#39;volatilite_annuelle&#39;]:.2f}&quot;)
+print(f&quot; • Sharpe = {sharpe_A:.3f}&quot;)
+print(f&quot;\n PORTEFEUILLE B :&quot;)
+print(f&quot; • Sharpe = ({stats_B[&#39;rendement_annuel&#39;]:.2f} - {taux_sans_risque}) / {stats_B[&#39;volatilite_annuelle&#39;]:.2f}&quot;)
+print(f&quot; • Sharpe = {sharpe_B:.3f}&quot;)
+# Interprétation Sharpe
+print(f&quot;\n INTERPRÉTATION :&quot;)
+if sharpe_A &gt; 1:
+print(f&quot; ✓ Portefeuille A : Excellent (Sharpe &gt; 1)&quot;)
+elif sharpe_A &gt; 0.5:
+print(f&quot; ✓ Portefeuille A : Bon (0.5 &lt; Sharpe &lt; 1)&quot;)
+else:
+print(f&quot; ✗ Portefeuille A : Faible (Sharpe &lt; 0.5)&quot;)
+if sharpe_B &gt; 1:
+print(f&quot; ✓ Portefeuille B : Excellent (Sharpe &gt; 1)&quot;)
+elif sharpe_B &gt; 0.5:
+print(f&quot; ✓ Portefeuille B : Bon (0.5 &lt; Sharpe &lt; 1)&quot;)
+else:
+print(f&quot; ✗ Portefeuille B : Faible (Sharpe &lt; 0.5)&quot;)
+# b) RECOMMANDATION CLIENT
+print(f&quot;\n&quot; + &quot;=&quot;*80)
+print(&quot;�� RECOMMANDATION CLIENT FINALE&quot;)
+print(&quot;=&quot;*80)
+print(f&quot;\n�� CRITÈRES DÉCISION :&quot;)
+print(f&quot; 1. VaR 95% annuelle ≤ -€50,000 (contrainte risque)&quot;)
+print(f&quot; 2. Ratio Sharpe maximum (efficience)&quot;)
+print(f&quot; 3. Normalité rendements (fiabilité VaR)&quot;)
+print(f&quot;\n�� TABLEAU COMPARATIF :&quot;)
+print(f&quot;\n{&#39;Critère&#39;:&lt;30} {&#39;Portefeuille A&#39;:&lt;20} {&#39;Portefeuille B&#39;:&lt;20}&quot;)
+print(f&quot;{&#39;-&#39;*70}&quot;)
+print(f&quot;{&#39;Rendement annuel&#39;:&lt;30} {stats_A[&#39;rendement_annuel&#39;]:&gt;8.2f}% {stats_B[&#39;rendement_annuel&#39;]:&gt;28.2f}%&quot;)
+print(f&quot;{&#39;Volatilité annuelle&#39;:&lt;30} {stats_A[&#39;volatilite_annuelle&#39;]:&gt;8.2f}% {stats_B[&#39;volatilite_annuelle&#39;]:&gt;28.2f}%&quot;)
+print(f&quot;{&#39;VaR 95% (€)&#39;:&lt;30} {var_A[&#39;var_annuelle_euros&#39;]:&gt;13,.0f} € {var_B[&#39;var_annuelle_euros&#39;]:&gt;22,.0f} €&quot;)
+print(f&quot;{&#39;Contrainte respectée&#39;:&lt;30} {&#39;✓ OUI&#39; if contrainte_A else &#39;✗ NON&#39;:&lt;20} {&#39;✓ OUI&#39; if contrainte_B else &#39;✗ NON&#39;:&lt;20}&quot;)
+print(f&quot;{&#39;Ratio Sharpe&#39;:&lt;30} {sharpe_A:&gt;13.3f} {sharpe_B:&gt;27.3f}&quot;)
+print(f&quot;{&#39;Normalité (p-value)&#39;:&lt;30} {p_value_A:&gt;13.3f} {p_value_B:&gt;27.3f}&quot;)
+print(f&quot;\n�� RECOMMANDATION FINALE :&quot;)
+# Logique décision
+if not contrainte_A and not contrainte_B:
+print(f&quot; ❌ AUCUN PORTEFEUILLE ne respecte contrainte risque client.&quot;)
+print(f&quot; → Réduire allocation ou revoir tolérance perte.&quot;)
+elif contrainte_A and not contrainte_B:
+print(f&quot; ✅ PORTEFEUILLE A (Conservative) RECOMMANDÉ&quot;)
+
+print(f&quot; → Seul respecte VaR ≤ -€50,000&quot;)
+print(f&quot; → Sharpe {sharpe_A:.2f} correct, volatilité maîtrisée {stats_A[&#39;volatilite_annuelle&#39;]:.1f}%&quot;)
+elif not contrainte_A and contrainte_B:
+print(f&quot; ✅ PORTEFEUILLE B (Agressif) RECOMMANDÉ&quot;)
+print(f&quot; → Seul respecte VaR ≤ -€50,000&quot;)
+print(f&quot; → Rendement élevé {stats_B[&#39;rendement_annuel&#39;]:.1f}% mais volatilité importante {stats_B[&#39;volatilite_annuelle&#39;]:.1f}%
+else: # Les deux respectent contrainte
+if sharpe_A &gt; sharpe_B:
+print(f&quot; ✅ PORTEFEUILLE A (Conservative) RECOMMANDÉ&quot;)
+print(f&quot; → Meilleur Sharpe ({sharpe_A:.2f} vs {sharpe_B:.2f})&quot;)
+print(f&quot; → Profil risque/rendement optimal selon contrainte client&quot;)
+else:
+print(f&quot; ✅ PORTEFEUILLE B (Agressif) RECOMMANDÉ&quot;)
+print(f&quot; → Meilleur Sharpe ({sharpe_B:.2f} vs {sharpe_A:.2f})&quot;)
+print(f&quot; → Rendement supérieur ({stats_B[&#39;rendement_annuel&#39;]:.1f}% vs {stats_A[&#39;rendement_annuel&#39;]:.1f}%)&quot;)
+print(f&quot;\n JUSTIFICATION :&quot;)
+print(f&quot; • VaR paramétrique fiable si normalité vérifiée (test Shapiro p &gt; 0.05)&quot;)
+print(f&quot; • Sharpe mesure efficience : unités rendement excédentaire par unité risque&quot;)
+print(f&quot; • Client conservateur → Privilégier A (stabilité)&quot;)
+print(f&quot; • Client tolérant volatilité → Envisager B si Sharpe meilleur et VaR OK&quot;)
+print(f&quot;\n✓ FIN PARTIE 1\n&quot;)
